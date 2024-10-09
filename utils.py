@@ -9,8 +9,14 @@ def load_ptu_file(filepath):
         # Example: Decode time-correlated single photon counting (TCSPC) records
         records = ptu.decode_records()
         return records
-    
 
+def decode_flim_image(filepath):
+    """Decode FLIM image data from the PTU file."""
+    with ptufile.PtuFile(filepath) as ptu:
+        # Decode image histogram data (for FLIM)
+        image_data = ptu.decode_image(channel=0, dtime=-1, asxarray=False)
+        return image_data
+    
 def n_exponential_tail_fit(time, intensity, n):
     """Fit the intensity decay curve with an n-exponential tail fit model."""
     def model(params, time):
@@ -32,29 +38,11 @@ def n_exponential_tail_fit(time, intensity, n):
     result = lmfit.minimize(residual, params, args=(time, intensity))
     return result.params
 
-
 def calculate_tau_average(params, n):
     """Calculate the average lifetime from the fitted parameters."""
     tau_avg = sum(params[f'A{i+1}'].value * params[f'tau{i+1}'].value for i in range(n))
     total_A = sum(params[f'A{i+1}'].value for i in range(n))
     return tau_avg / total_A
-
-
-def decode_flim_image(filepath):
-    """Decode FLIM image data from the PTU file."""
-    with ptufile.PtuFile(filepath) as ptu:
-        # Decode image histogram data (for FLIM)
-        image_data = ptu.decode_image(channel=0, dtime=-1, asxarray=True)
-        return image_data
-    
-
-def display_flim_image(image_data):
-    """Display the FLIM image in Napari and allow the user to define ROIs."""
-    with napari.gui_qt():
-        viewer = napari.Viewer()
-        viewer.add_image(image_data, name='FLIM Image')
-        roi_layer = viewer.add_shapes(name='ROIs', shape_type='polygon')  # Users can define ROIs here
-        return viewer, roi_layer
 
 def get_region_average_lifetime(roi, image_data, time_data, n):
     """Calculate average lifetime for a specific ROI."""
